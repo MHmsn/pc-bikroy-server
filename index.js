@@ -76,7 +76,24 @@ async function run() {
     app.get("/products", async (req, res) => {
       const categoryID = req.query.categoryID;
       const query = {sold: false, booked: false, reported: false}
-      categoryID ? query.categoryID = categoryID: query;
+      const products = await productsCollection.find(query).toArray();
+      res.send(products);
+    });
+    app.get("/products/myproducts", async (req, res) => {
+      const selleruid = req.query.selleruid;
+      const query = {selleruid: selleruid}
+      const products = await productsCollection.find(query).toArray();
+      res.send(products);
+    });
+    app.get("/products/:id", async (req, res) => {
+      const categoryID = req.params.id;
+      const query = {categoryID: categoryID};
+      const products = await productsCollection.find(query).toArray();
+      res.send(products);
+    });
+    
+    app.get("/advertisedproducts", async (req, res) => {
+      const query = {advertised: true};
       
       const products = await productsCollection.find(query).toArray();
       res.send(products);
@@ -101,7 +118,7 @@ async function run() {
       res.send(result);
       
     });
-    app.delete("/users", async (req, res) => {
+    app.delete("/users", verifyJWT, async (req, res) => {
       const email = req.decoded.email;
       const filter = {email: email};
       const user = await usersCollection.findOne(filter);
@@ -114,7 +131,28 @@ async function run() {
       const result = await usersCollection.deleteOne(query);
       res.send(result);
     });
-    app.put("/users/verify", async(req, res) => {
+    app.delete("/myproducts/delete", async (req, res) => {
+      const id = req.query.id;
+      console.log(id);
+       const query = { _id: ObjectId(id) };
+      const result = await productsCollection.deleteOne(query);
+      res.send(result);
+    });
+    app.put("/myproducts/advertise", async(req, res) => {
+      const id = req.query.id;
+      
+      const query = { _id: ObjectId(id) };
+      const tempProduct = await productsCollection.findOne(query);
+      const options = {upsert: true};
+      const updatedDoc = {
+       $set: {
+         advertised: tempProduct.advertised ? false: true
+       }
+     }
+      const result = await productsCollection.updateOne(query, updatedDoc, options);
+      res.send(result);
+    })
+    app.put("/users/verify",verifyJWT, async(req, res) => {
       const email = req.decoded.email;
       const filter = {email: email};
       const user = await usersCollection.findOne(filter);
@@ -124,14 +162,23 @@ async function run() {
       
       const uid = req.query.uid;
       const query = { uid: uid };
+      const productQuery = { selleruid: uid };
       const tempUser = await usersCollection.findOne(query);
-      console.log(tempUser)
+      const tempProducts = await productsCollection.find(productQuery).toArray();
+
+      const productUpdatedDoc = {
+        $set: {
+          sellerVerified: tempProducts[0]?.sellerVerified ? false: true
+        }
+      }
       const options = {upsert: true};
+      const productResult = await productsCollection.updateMany(productQuery, productUpdatedDoc, options);
       const updatedDoc = {
        $set: {
          verified: tempUser.verified ? false: true
        }
      }
+    
       const result = await usersCollection.updateOne(query, updatedDoc, options);
       res.send(result);
     })
