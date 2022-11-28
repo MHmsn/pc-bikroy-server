@@ -37,6 +37,8 @@ async function run() {
   try {
     const categoryCollection = client.db("PCBikroy").collection("Categories");
     const usersCollection = client.db("PCBikroy").collection("Users");
+    const productsCollection = client.db("PCBikroy").collection("Products");
+    const ordersCollection = client.db("PCBikroy").collection("Orders");
 
     app.get("/categories", async (req, res) => {
       const query = {};
@@ -76,11 +78,39 @@ async function run() {
       res.send(result);
     });
     app.delete("/users",verifyJWT, async (req, res) => {
+      const email = req.decoded.email;
+      const filter = {email: email};
+      const user = await usersCollection.findOne(filter);
+      if(user?.role !== 'Admin'){
+        return res.status(403).send({message: 'Forbidden Access'})
+      }
+      
       const uid = req.query.uid;
       const query = { uid: uid };
       const result = await usersCollection.deleteOne(query);
       res.send(result);
     });
+    app.put("/users/verify", verifyJWT, async(req, res) => {
+      const email = req.decoded.email;
+      const filter = {email: email};
+      const user = await usersCollection.findOne(filter);
+      if(user?.role !== 'Admin'){
+        return res.status(403).send({message: 'Forbidden Access'})
+      }
+      
+      const uid = req.query.uid;
+      const query = { uid: uid };
+      const tempUser = await usersCollection.findOne(query);
+      console.log(tempUser)
+      const options = {upsert: true};
+      const updatedDoc = {
+       $set: {
+         verified: tempUser.verified ? false: true
+       }
+     }
+      const result = await usersCollection.updateOne(query, updatedDoc, options);
+      res.send(result);
+    })
   } finally {
   }
 }
