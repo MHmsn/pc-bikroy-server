@@ -40,19 +40,20 @@ async function run() {
     const productsCollection = client.db("PCBikroy").collection("Products");
     const ordersCollection = client.db("PCBikroy").collection("Orders");
 
+
     app.get("/categories", async (req, res) => {
       const query = {};
       const categories = await categoryCollection.find(query).toArray();
       res.send(categories);
     });
-    app.get("/user", verifyJWT, async (req, res) => {
+    app.get("/user", async (req, res) => {
       const email = req.query.email;
       const query = { email: email };
       const user = await usersCollection.findOne(query);
 
       res.send(user);
     });
-    app.get("/users", verifyJWT, async (req, res) => {
+    app.get("/users", async (req, res) => {
       const role = req.query.role;
       const query = { role: role };
       const users = await usersCollection.find(query).toArray();
@@ -72,12 +73,35 @@ async function run() {
       console.log(user);
       res.status(403).send({ accessToken: "" });
     });
+    app.get("/products", async (req, res) => {
+      const categoryID = req.query.categoryID;
+      const query = {sold: false, booked: false, reported: false}
+      categoryID ? query.categoryID = categoryID: query;
+      
+      const products = await productsCollection.find(query).toArray();
+      res.send(products);
+
+
+    });
     app.post("/users", async (req, res) => {
       const user = req.body;
-      const result = await usersCollection.insertOne(user);
-      res.send(result);
+      const userCheck = await usersCollection.findOne({email: user.email});
+      if(!userCheck){
+        const result = await usersCollection.insertOne(user);
+        res.send(result);
+      }
+      else{
+        res.send(userCheck);
+      }
+      
     });
-    app.delete("/users",verifyJWT, async (req, res) => {
+    app.post("/products", async (req, res) => {
+      const product = req.body;
+      const result = await productsCollection.insertOne(product);
+      res.send(result);
+      
+    });
+    app.delete("/users", async (req, res) => {
       const email = req.decoded.email;
       const filter = {email: email};
       const user = await usersCollection.findOne(filter);
@@ -90,7 +114,7 @@ async function run() {
       const result = await usersCollection.deleteOne(query);
       res.send(result);
     });
-    app.put("/users/verify", verifyJWT, async(req, res) => {
+    app.put("/users/verify", async(req, res) => {
       const email = req.decoded.email;
       const filter = {email: email};
       const user = await usersCollection.findOne(filter);
