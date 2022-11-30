@@ -4,7 +4,6 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
 const app = express();
 const port = process.env.PORT || 5000;
-const { initializeApp } = require('firebase-admin/app');
 const stripe = require("stripe")('sk_test_51M92PVKGeN6HPiFizP2BVnHnOlJqp1Ygsrxamz7MARNxcTCisyE2Cek63Nm0a1Lw9usAVlWZWxvjsxFaC2r9eBAw00etv0Lo6g');
 
 
