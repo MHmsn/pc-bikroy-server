@@ -68,13 +68,14 @@ async function run() {
     });
 
     app.get("/orders", verifyJWT, async (req, res) => {
+      const buyer = req.query.uid;
       const decodedEmail = req.decoded.email;
             const filter = {email: decodedEmail};
             const user = await usersCollection.findOne(filter);
             if(user?.role !== 'Buyer'){
                 return res.status(403).send({message: 'Forbidden Access'})
             }
-      const query = {};
+      const query = {buyeruid: buyer};
       const orders = await ordersCollection.find(query).toArray();
       res.send(orders);
     });
@@ -128,7 +129,7 @@ async function run() {
     });
     
     app.get("/advertisedproducts", async (req, res) => {
-      const query = {advertised: true};
+      const query = {advertised: true, booked: false, sold: false, reported: false};
       
       const products = await productsCollection.find(query).toArray();
       res.send(products);
@@ -156,8 +157,8 @@ async function run() {
     app.post('/payments', async (req, res) => {
       const payment = req.body;
       const result = await paymentsCollection.insertOne(payment);
-      const id = payment.productID;
-      const query = {_id: ObjectId(id)};
+      const id = payment.orderId;
+      const query = {productID: id};
       const updatedDoc = {
         $set: {
           paid: true,
@@ -166,6 +167,14 @@ async function run() {
       }
       const option = {upsert: true};
       const updateResult = await ordersCollection.updateOne(query, updatedDoc, option)
+      const productQuery = {_id: ObjectId(id)};
+      const updatedProductDoc = {
+        $set: {
+          sold: true,
+          transactionId: payment.transactionId
+        }
+      }
+      const productResult = await productsCollection.updateOne(productQuery, updatedProductDoc, option)
       res.send(result);
     })
 
